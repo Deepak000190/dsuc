@@ -17,7 +17,8 @@
 #include <stdio.h>      /* printf, scanf, fopen, fclose, fgets, fprintf */
 #include <stdlib.h>     /* malloc, realloc, free, qsort, exit           */
 #include <string.h>     /* strcpy, strcmp, strlen, strtok, strncpy      */
-#include <time.h>       /* clock_t, clock(), CLOCKS_PER_SEC             */
+#include <time.h>
+#include <ctype.h>      /* clock_t, clock(), CLOCKS_PER_SEC             */
 
 /* ============================================================
  * CONSTANTS
