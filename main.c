@@ -17,8 +17,7 @@
 #include <stdio.h>      /* printf, scanf, fopen, fclose, fgets, fprintf */
 #include <stdlib.h>     /* malloc, realloc, free, qsort, exit           */
 #include <string.h>     /* strcpy, strcmp, strlen, strtok, strncpy      */
-#include <time.h>
-#include <ctype.h>      /* clock_t, clock(), CLOCKS_PER_SEC             */
+#include <time.h>       /* clock_t, clock(), CLOCKS_PER_SEC             */
 
 /* ============================================================
  * CONSTANTS
@@ -224,17 +223,31 @@ int parse_file(Table *t, const char *filepath) {
 
         /* --- Allocate current row if this is the first key in a record --- */
         if (!row_started) {
-            cur_row = alloc_row(t->num_cols);
-            row_started = 1;
-        } else if (cur_row) {
-            /* Extend the current row if new columns were added */
-            cur_row = (char**)realloc(cur_row, t->num_cols * sizeof(char*));
-            /* The new slot was not allocated yet */
-        }
+    cur_row = alloc_row(t->num_cols);
+    row_started = 1;
+}
+else if (cur_row) {
+    int old_cols = t->num_cols - 1;
+
+    cur_row = (char**)realloc(cur_row, t->num_cols * sizeof(char*));
+
+    /* allocate memory for new column */
+    cur_row[old_cols] = (char*)malloc(MAX_VAL_LEN * sizeof(char));
+
+    if (!cur_row[old_cols]) {
+        printf("Memory allocation failed\n");
+        fclose(fp);
+        return 0;
+    }
+
+    strcpy(cur_row[old_cols], "");
+}
 
         /* Store value in the correct column of cur_row */
-        if (cur_row[col]) strncpy(cur_row[col], val, MAX_VAL_LEN - 1);
-    }
+        if (cur_row[col] != NULL) {
+    strncpy(cur_row[col], val, MAX_VAL_LEN - 1);
+    cur_row[col][MAX_VAL_LEN - 1] = '\0';
+}
 
     /* Handle last record (file may not end with blank line) */
     if (row_started && cur_row)
@@ -914,7 +927,85 @@ int main(int argc, char *argv[]) {
             int k;
             for (k = 0; k < num_tables; k++)
                 printf("    [%d] %s  (%d rows, %d cols)%s\n",
-                       k, tables[k]->name,
+                       k, tables[k]->name,/*
+ * ============================================================
+ * ASSIGNMENT 1 - DSUC+DBMS, 1st MCA, HBTU
+ * Mini In-Memory Generic Database System in C
+ * ============================================================
+ * Author  : [Your Name]
+ * Roll No : [Your Roll No]
+ * Date    : April 2026
+ *
+ * AI Tool Used : Claude (Anthropic)
+ * AI Usage     : Architecture design and explanation assistance.
+ *                All logic below is student-implemented and explained
+ *                line by line. AI-assisted sections are marked [AI].
+ * ============================================================
+ */
+
+#include <stdio.h>      /* printf, scanf, fopen, fclose, fgets, fprintf */
+#include <stdlib.h>     /* malloc, realloc, free, qsort, exit           */
+#include <string.h>     /* strcpy, strcmp, strlen, strtok, strncpy      */
+#include <time.h>
+#include <ctype.h>      /* clock_t, clock(), CLOCKS_PER_SEC             */
+
+/* ============================================================
+ * CONSTANTS
+ * ============================================================ */
+#define MAX_COLS    30      /* max columns (headers) any table can have  */
+#define MAX_VAL_LEN 256     /* max length of a single cell value         */
+#define MAX_HDR_LEN 64      /* max length of a header/column name        */
+#define MAX_PATH    512     /* max file path length                      */
+
+/* ============================================================
+ * DATA STRUCTURES
+ * ============================================================
+ *
+ * Think of a TABLE like this in your head:
+ *
+ *   headers[]:   Name    Roll    Marks
+ *                 0       1       2       <-- column indices
+ *
+ *   rows[][]:   "Alice"  "101"   "85"    <-- row 0
+ *               "Bob"    "102"   "72"    <-- row 1
+ *               "Carol"  "103"   "90"    <-- row 2
+ *
+ * - headers  : array of strings, one per column
+ * - rows     : 2D array of strings; rows[r][c] = value at row r, col c
+ * - num_rows : how many data rows are currently loaded
+ * - num_cols : how many columns exist
+ * - name     : friendly name for this table (e.g. "MCASampleData1")
+ * - modified : flag: 1 = user has changed something, 0 = pristine
+ */
+typedef struct {
+    char   name[MAX_PATH];              /* table name                   */
+    char   headers[MAX_COLS][MAX_HDR_LEN]; /* column names              */
+    char **rows[100000];                /* pointers to row arrays       */
+    int    num_rows;                    /* count of loaded rows         */
+    int    num_cols;                    /* count of columns             */
+    int    modified;                    /* dirty flag                   */
+} Table;
+
+/* ============================================================
+ * GLOBAL sort key (used by qsort comparator)
+ * ============================================================ */
+int g_sort_col = 0;   /* which column index to sort by */
+
+/* ============================================================
+ * FUNCTION PROTOTYPES
+ * ============================================================ */
+Table* create_table(const char *name);
+void   free_table(Table *t);
+int    load_folder(Table *t, const char *folder_path);
+int    save_table(Table *t, const char *folder_path);
+void   print_table(Table *t);
+void   sort_table(Table *t, const char *header);
+void   insert_row(Table *t);
+void   delete_row(Table *t);
+void   update_row(Table *t);
+Table* join_tables(Table *a, Table *b, const char *col_a, const char *col_b, const char *type);
+void   run_query(Table **tables, int num_tables);
+
                        tables[k]->num_rows, tables[k]->num_cols,
                        tables[k]->modified ? " [modified]" : "");
             printf("  Active: %s\n  Switch to (index): ", active->name);
