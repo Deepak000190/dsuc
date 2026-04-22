@@ -17,8 +17,8 @@
 #include <stdio.h>      /* printf, scanf, fopen, fclose, fgets, fprintf */
 #include <stdlib.h>     /* malloc, realloc, free, qsort, exit           */
 #include <string.h>     /* strcpy, strcmp, strlen, strtok, strncpy      */
-#include <time.h> 
-#include <ctype.h>      /* clock_t, clock(), CLOCKS_PER_SEC             */
+#include <time.h>  
+#include <ctype.h>     /* clock_t, clock(), CLOCKS_PER_SEC             */
 
 /* ============================================================
  * CONSTANTS
@@ -66,14 +66,14 @@ int g_sort_col = 0;   /* which column index to sort by */
  * FUNCTION PROTOTYPES
  * ============================================================ */
 Table* create_table(const char *name);
-int   free_table(Table *t);
+void   free_table(Table *t);
 int    load_folder(Table *t, const char *folder_path);
 int    save_table(Table *t, const char *folder_path);
 void   print_table(Table *t);
 void   sort_table(Table *t, const char *header);
 void   insert_row(Table *t);
-int   delete_row(Table *t);
-int   update_row(Table *t);
+void   delete_row(Table *t);
+void   update_row(Table *t);
 Table* join_tables(Table *a, Table *b, const char *col_a, const char *col_b, const char *type);
 void   run_query(Table **tables, int num_tables);
 double time_operation(void (*op)(Table*), Table *t);
@@ -119,7 +119,7 @@ Table* create_table(const char *name) {
 }
 
 /* Free a table and all its rows */
-int free_table(Table *t) {
+void free_table(Table *t) {
     int r;
     for (r = 0; r < t->num_rows; r++)
         free_row(t->rows[r], t->num_cols);
@@ -224,31 +224,17 @@ int parse_file(Table *t, const char *filepath) {
 
         /* --- Allocate current row if this is the first key in a record --- */
         if (!row_started) {
-    cur_row = alloc_row(t->num_cols);
-    row_started = 1;
-}
-else if (cur_row) {
-    int old_cols = t->num_cols - 1;
-
-    cur_row = (char**)realloc(cur_row, t->num_cols * sizeof(char*));
-
-    /* allocate memory for new column */
-    cur_row[old_cols] = (char*)malloc(MAX_VAL_LEN * sizeof(char));
-
-    if (!cur_row[old_cols]) {
-        printf("Memory allocation failed\n");
-        fclose(fp);
-        return 0;
-    }
-
-    strcpy(cur_row[old_cols], "");
-}
+            cur_row = alloc_row(t->num_cols);
+            row_started = 1;
+        } else if (cur_row) {
+            /* Extend the current row if new columns were added */
+            cur_row = (char**)realloc(cur_row, t->num_cols * sizeof(char*));
+            /* The new slot was not allocated yet */
+        }
 
         /* Store value in the correct column of cur_row */
-        if (cur_row[col] != NULL) {
-    strncpy(cur_row[col], val, MAX_VAL_LEN - 1);
-    cur_row[col][MAX_VAL_LEN - 1] = '\0';
-}
+        if (cur_row[col]) strncpy(cur_row[col], val, MAX_VAL_LEN - 1);
+    }
 
     /* Handle last record (file may not end with blank line) */
     if (row_started && cur_row)
@@ -287,7 +273,7 @@ int load_folder(Table *t, const char *folder_path) {
     }
     pclose(ls);
 
-    printf([LOAD] Done. %d file(s), %d row(s), %d column(s)\n",
+    printf("[LOAD] Done. %d file(s), %d row(s), %d column(s)\n",
            count, t->num_rows, t->num_cols);
     return count;
 }
